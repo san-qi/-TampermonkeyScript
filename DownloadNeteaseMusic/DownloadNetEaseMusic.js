@@ -7,8 +7,6 @@
 // @author       san-qi
 // @license      GPLv3
 // @match        *://music.163.com/*
-// @connect      music.163.com
-// @connect      *.126.net
 // @require      https://cdn.bootcdn.net/ajax/libs/handsontable/8.3.2/handsontable.full.min.js
 // @resource     https://cdn.bootcdn.net/ajax/libs/handsontable/8.3.2/handsontable.full.min.css
 // @require      https://cdn.jsdelivr.net/npm/sweetalert2@11.4.32/dist/sweetalert2.all.min.js
