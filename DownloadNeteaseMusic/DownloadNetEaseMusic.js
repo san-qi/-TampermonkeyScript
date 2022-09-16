@@ -2,8 +2,9 @@
 // @name         Download NetEase Music
 // @namespace    http://tampermonkey.net/
 // @version      1.0
-// @description  ½øÈëÍøÒ×¸èµ¥,ÏÂÔØ¸Ã¸èµ¥ÄÚµÄËùÓĞ¸èÇú
+// @description  è¿›å…¥ç½‘æ˜“æ­Œå•,ä¸‹è½½è¯¥æ­Œå•å†…çš„æ‰€æœ‰æ­Œæ›²
 // @author       san-qi
+// @license      GPLv3
 // @match        *://music.163.com/*
 // @require      https://cdn.bootcdn.net/ajax/libs/handsontable/8.3.2/handsontable.full.min.js
 // @resource     https://cdn.bootcdn.net/ajax/libs/handsontable/8.3.2/handsontable.full.min.css
@@ -22,7 +23,7 @@
 
     var ui = {
         get_messenger: function(){
-            // ±ÜÃâÍ¬Ê±³öÏÖ¶à¸ömessenger
+            // Avoid multiple messages at the same time
             var shown_message = false;
 
             return (title, content = "<div id='netEaseMusicWrapper'></div>", icon = "success", width = "32em") => {
@@ -50,7 +51,6 @@
         },
 
         show_table: function(wrapper_id, data, col_width, merge_cells = undefined){
-            // console.log(data, col_width);
             if(data === undefined){
                 return;
             }
@@ -70,7 +70,7 @@
                     mergeCells: merge_cells,
                     licenseKey: 'non-commercial-and-evaluation'
                 });
-            // È«ÎÄÖ»¶ÁÇÒ²»¿ÉÑ¡ÖĞ
+            // Set the table is read-only and unchecked
             table.updateSettings({readOnly: true, disableVisualSelection: true});
             table.render();
         }
@@ -78,7 +78,7 @@
     var messenger = ui.get_messenger();
 
     var network = {
-        // »ñÈ¡¸èµ¥Ò³ÃæÏÂµÄËùÓĞ¸èÇúĞÅÏ¢
+        // Gets all the song information under the playlist page
         get_playlist_info(){
             var doc = document.getElementById("g_iframe").contentDocument;
             var info = {"ids":[], "names":[]};
@@ -91,10 +91,10 @@
             return info;
         },
 
-        // ÏÂÔØ¸èÇú
-        // TODO  Resend on failed
+        // Start Download
+        // TODO Resend on failed
         download(id, name, on_succeed, on_error, on_intercept){
-            // ¹¹ÔìURLÇëÇó
+            // Construct a URL request
             var url = "http://music.163.com/song/media/outer/url?id="+id+".mp3";
 
             return new Promise(
@@ -105,14 +105,13 @@
                     binary: true,
                     responseType: "blob",
                     onload: function(r) {
-                        // console.log(r);
-                        // ÅĞ¶ÏÊÇ·ñÓĞÏÂÔØÆ÷À¹½Ø
+                        // Determine if there is a downloader blocker
                         if(r.status == 204){
                             reject();
                         }
-                        // ÅĞ¶ÏÖ¸ÏòµÄ×ÊÔ´ÊÇ·ñÕıÈ·
+                        // Determine whether the resource you are pointing to is correct
                         else if(r.response.type != "text/html;charset=utf8"){
-                            // ÏÂÔØ×îÖÕ×ÊÔ´,ÆäËùÔÚµØÖ·¼´Îªr.finalUrl
+                            // Gets the URL after the jump, i.e. finalUrl
                             resolve(r.finalUrl);
                         }
                         else{
@@ -122,8 +121,8 @@
                     onerror: err => reject(err)
                 })
             ).then(
-                // ±£´æ×ÊÔ´µ½±¾µØ
-                // Á¬ĞøthenÊ±·µ»ØPromise²ÅÄÜÔÚÆäÖĞµ÷ÓÃresolve¼°reject²Ù×÷
+                // Save the resource locally
+                // NOTE: When 'then' is used consecutively, only the return of 'Promise' can call the 'resolve' and 'reject' operations in it
                 target_url => new Promise(
                     (resolve, reject) =>
                     GM_download({
@@ -136,18 +135,17 @@
                     })
                 )
             ).then(
-                // ÏÂÔØÍê³Éºó ¿ÉÖ´ĞĞ²Ù×÷
+                // On succeed
                 data => {
-                    // console.log(data + " download success");
                     on_succeed(data);
                 }
             ).catch(
                 err => {
-                    // ÏÂÔØÒì³£
+                    // On error
                     if(err){
                         on_error(err);
                     }
-                    // ÇëÇó±»À¹½Ø
+                    // When the request is blocked
                     else{
                         on_intercept();
                     }
@@ -156,12 +154,11 @@
         }
     }
 
-    // ¶ÔÄÚÈİÅÅĞò½ø¶ø·Ö×é
+    // Sort and group the content
     function sort_then_generate(failure, column){
         if(failure === undefined){
             return {};
         }
-        // console.log(failure);
         failure.sort((a, b) => b.length - a.length);
 
         var result = {};
@@ -170,21 +167,17 @@
         result.row_num = row;
         result.column_num = Math.min(column, failure.length);
 
-        // ÉèÖÃÊı¾İ
+        // Set data
         result.data = [];
-        // ¶àÉèÖÃÒ»ĞĞÒÔ·ÀÖ¹µ×²¿±»ÕÚµ²
+        // Set one more row to prevent the bottom from being obscured
         for(let _=0; _<=row; _++){
             result.data.push([]);
         };
         for(let i=0; i<len; ++i){
             result.data[i%row].push(failure[i]);
         };
-        // // ²¹Æë×îºóÒ»ĞĞ
-        // for(let i=len%column; i<column; ++i){
-        //    result.data[row-1].push("");
-        // }
 
-        // ÉèÖÃ¸÷ÁĞÕ¼±È
+        // Set the percentage of each column width
         result.colWidths = [];
         var colSumWidths = 0;
         for(let i=0; i<result.column_num; ++i){
@@ -205,14 +198,14 @@
         var failure = [];
 
         var url = window.location.href;
-        // Î»ÓÚ¸èµ¥Ò³Ãæ
+        // When located on the playlist page
         if (/https?:\/\/music\.163\.com\/.*\/playlist\?id=\d*/i.test(url)){
             Promise.all(
-                // ÏÂÔØ
+                // Start the download of all songs
                 ids.map((item, i) => {
-                    // ±ØĞë¼Óreturn,·ñÔò»áÖ±½ÓÔÚÉú²ú¹ı³ÌÖĞÖ´ĞĞ
-                    // ´Ó¶øµ¼ÖÂPromise::allÊ§Ğ§,½ø¶øµ¼ÖÂËùÓĞ×ÊÔ´ÏÂÔØÍê³ÉºóµÄÍ³¼ÆÇåÀíĞĞÎªÌáÇ°Ö´ĞĞ
-                    // Õâ½«»áÊ¹Í³¼ÆµÄ½á¹û²úÉúÆ«²î
+                    // â€˜Returnâ€™ must be added, otherwise it will be executed directly in the production process
+                    // This results in The Promise::all fails
+                    // This will bias the results of the statistics
                     return network.download(
                         item, names[i],
                         (data) => {
@@ -223,19 +216,19 @@
                         },
                         () => {
                             messenger(
-                                "ÏÂÔØÊ§°Ü",
-                                "<div id='netEaseMusicWrapper'>ÇëÔİÊ±¹Ø±Õ IDM µÈÏÂÔØÆ÷µÄÀ¹½ØÈ¨ÏŞ<br>»ò½« 'http://*.126.net/*.mp3' ¼ÓÈëµ½ÏÂÔØÆ÷°×Ãûµ¥</div>",
+                                "ä¸‹è½½å¤±è´¥",
+                                "<div id='netEaseMusicWrapper'>è¯·æš‚æ—¶å…³é—­ IDM ç­‰ä¸‹è½½å™¨çš„æ‹¦æˆªæƒé™<br>æˆ–å°† 'http://*.126.net/*.mp3' åŠ å…¥åˆ°ä¸‹è½½å™¨ç™½åå•</div>",
                                 "error"
                             );
                         },
                     );
                 })
             ).then(
-                // ËùÓĞÖ´ĞĞÍê±Ïºó,Í³¼ÆÏÂÔØÊ§°ÜµÄ×ÊÔ´
+                // After all executions are completed, the resources that failed to download are counted
                 () => {
-                    // µ¯´°ÌáÊ¾
+                    // Pop-up prompts
                     messenger(
-                        "¹²" + success.length + "Ê×ÇúÄ¿ÏÂÔØ³É¹¦; " + failure.length + "Ê×ÏÂÔØÊ§°Ü",
+                        "å…±" + success.length + "é¦–æ›²ç›®ä¸‹è½½æˆåŠŸ; " + failure.length + "é¦–ä¸‹è½½å¤±è´¥",
                         '<div id="netEaseMusicWrapper"></div>',
                         "success",
                         "90%"
@@ -244,12 +237,12 @@
                     // TODO Use parameter to judge
                     const column_num = 3;
                     var result = sort_then_generate(failure, column_num);
-                    // µ¯´°ÄÚÇ¶±í¸ñ,Í¨¹ı±í¸ñÕ¹Ê¾ÏÂÔØÊ§°ÜµÄĞÅÏ¢
+                    // A pop-up window contains an inline table that displays the download failure
                     ui.show_table("netEaseMusicWrapper", result.data, result.colWidths);
                 }
             );
         }
-        // Î»ÓÚµ¥ÇúÒ³Ãæ
+        // When located on the song page
         else if (/https?:\/\/music\.163\.com\/.*\/song\?id=\d*/i.test(url)){
             var doc = document.getElementById("g_iframe").contentDocument;
             var song = doc.querySelector("div.g-bd4.f-cb > div.g-mn4 > div > div > div.m-lycifo > div.f-cb > div.cnt > div.hd > div > em").innerText;
@@ -258,38 +251,38 @@
             network.download(
                 id, song + " - " + singer,
                 (data) => {
-                    messenger("ÏÂÔØ³É¹¦");
+                    messenger("ä¸‹è½½æˆåŠŸ");
                 },
                 (err) => {
                     messenger(
-                        "ÏÂÔØÊ§°Ü",
-                        "<div id='netEaseMusicWrapper'>ÍøÂç²úÉú²¨¶¯»ò¸Ã¸èÇú×ÊÔ´Î´ÕÒµ½</div>",
+                        "ä¸‹è½½å¤±è´¥",
+                        "<div id='netEaseMusicWrapper'>ç½‘ç»œäº§ç”Ÿæ³¢åŠ¨æˆ–è¯¥æ­Œæ›²èµ„æºæœªæ‰¾åˆ°</div>",
                         "warning"
                     );
                 },
                 () => {
                     messenger(
-                        "ÏÂÔØÊ§°Ü",
-                        "<div id='netEaseMusicWrapper'>ÇëÔİÊ±¹Ø±Õ IDM µÈÏÂÔØÆ÷µÄÀ¹½ØÈ¨ÏŞ<br>»ò½« 'http://*.126.net/*.mp3' ¼ÓÈëµ½ÏÂÔØÆ÷°×Ãûµ¥</div>",
+                        "ä¸‹è½½å¤±è´¥",
+                        "<div id='netEaseMusicWrapper'>è¯·æš‚æ—¶å…³é—­ IDM ç­‰ä¸‹è½½å™¨çš„æ‹¦æˆªæƒé™<br>æˆ–å°† 'http://*.126.net/*.mp3' åŠ å…¥åˆ°ä¸‹è½½å™¨ç™½åå•</div>",
                         "error"
                     );
                 }
             );
         }
-        // Î»ÓÚÆäËüÒ³Ãæ
+        // When located on a different page
         else{
             messenger(
-                "µ±Ç°Ò³Ãæ²»ÄÜÖ´ĞĞ¸Ã²Ù×÷",
-                "<div id='netEaseMusicWrapper'>ÇëÓÚ¸èµ¥Ò³Ãæ»òµ¥ÇúÒ³ÃæÏÂÖ´ĞĞ²Ù×÷</div>",
+                "å½“å‰é¡µé¢ä¸èƒ½æ‰§è¡Œè¯¥æ“ä½œ",
+                "<div id='netEaseMusicWrapper'>è¯·äºæ­Œå•é¡µé¢æˆ–å•æ›²é¡µé¢ä¸‹æ‰§è¡Œæ“ä½œ</div>",
                 "warning"
             );
         }
     }
 
     function init(){
-        // È¥³ı¸èµ¥ÇúÄ¿ÏŞÖÆ
+        // Remove the limit on the number of tracks on a playlist page
         document.cookie="os=pc";
-        // µ±ÇÒ½öµ±Î»ÓÚ¸èµ¥Ò³ÃæÖ´ĞĞÒ³ÃæË¢ĞÂ
+        // Perform a page refresh if and only if it is located on a playlist page
         if (/https?:\/\/music\.163\.com\/.*\/playlist\?id=\d*/i.test(window.location.href)){
             document.getElementById('g_iframe').contentWindow.location.reload(true);
         }
@@ -297,24 +290,24 @@
 
     function tips(){
         messenger(
-            "ÓÃÇ°ĞëÖª",
+            "ç”¨å‰é¡»çŸ¥",
             "<div id='netEaseMusicWrapper'></div>",
             "question"
         );
         ui.show_table(
             "netEaseMusicWrapper",
             [
-                ["1. ", "ÍøÒ×ÔÆÍøÒ³°æ»áÓĞ20Ê×ÇúÄ¿µÄÏŞÖÆ"],
-                ["1. ", "µ±¸èµ¥ÏÔÊ¾²»È«Ê±Çëµã»÷¸Ã½Å±¾µÄµÚ¶şÌõÑ¡Ïî"],
-                ["1. ", "·ñÔò½Å±¾Ö»ÄÜÏÂÔØ¸èµ¥Ç°20Ê×ÇúÄ¿"],
+                ["1. ", "ç½‘æ˜“äº‘ç½‘é¡µç‰ˆä¼šæœ‰20é¦–æ›²ç›®çš„é™åˆ¶"],
+                ["1. ", "å½“æ­Œå•æ˜¾ç¤ºä¸å…¨æ—¶è¯·ç‚¹å‡»è¯¥è„šæœ¬çš„ç¬¬äºŒæ¡é€‰é¡¹"],
+                ["1. ", "å¦åˆ™è„šæœ¬åªèƒ½ä¸‹è½½æ­Œå•å‰20é¦–æ›²ç›®"],
                 ["~~~", "~~~"],
-                ["2. ", "ÈôÄãPCÉÏ°²×°ÓĞIDMµÈÏÂÔØÆ÷"],
-                ["2. ", "Çë¶Ô 'http://*.126.net/*.mp3' ·ÅĞĞ"],
-                ["2. ", "·ñÔòÍ¨¹ıIDMÏÂÔØÎÄ¼şÃüÃû»áÂÒÂë"],
+                ["2. ", "è‹¥ä½ PCä¸Šå®‰è£…æœ‰IDMç­‰ä¸‹è½½å™¨"],
+                ["2. ", "è¯·å¯¹ 'http://*.126.net/*.mp3' æ”¾è¡Œ"],
+                ["2. ", "å¦åˆ™é€šè¿‡IDMä¸‹è½½æ–‡ä»¶å‘½åä¼šä¹±ç "],
                 ["~~~", "~~~"],
-                ["3. ", "µã»÷ '»ñÈ¡' ½øĞĞÏÂÔØ"],
-                ["3. ", "ÏÂÔØÊ±¼ä¿ÉÄÜºÜ³¤"],
-                ["3. ", "ÇëÄÍĞÄµÈºò"],
+                ["3. ", "ç‚¹å‡» 'è·å–' è¿›è¡Œä¸‹è½½"],
+                ["3. ", "ä¸‹è½½æ—¶é—´å¯èƒ½å¾ˆé•¿"],
+                ["3. ", "è¯·è€å¿ƒç­‰å€™"],
                 ["~~~", "~~~"],
                 ["Enjoy those song!", "Enjoy those song!"],
             ],
@@ -331,7 +324,7 @@
         );
     }
 
-    GM_registerMenuCommand("ÓÃÇ°ĞëÖª", tips, "");
-    GM_registerMenuCommand("½â³ıÏŞÖÆ", init, "");
-    GM_registerMenuCommand("»ñÈ¡", main, "");
+    GM_registerMenuCommand("ç”¨å‰é¡»çŸ¥", tips, "");
+    GM_registerMenuCommand("è§£é™¤é™åˆ¶", init, "");
+    GM_registerMenuCommand("è·å–", main, "");
 })();
