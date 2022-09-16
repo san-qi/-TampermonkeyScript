@@ -2,8 +2,9 @@
 // @name         Close Zhihu Popup
 // @namespace    http://tampermonkey.net/
 // @version      0.1
-// @description  自动关闭知乎网页版的初始登录窗口
+// @description  鑷姩鍏抽棴鐭ヤ箮缃戦〉鐗堢殑鍒濆鐧诲綍绐楀彛
 // @author       san-qi
+// @license      GPLv3
 // @match        https://*.zhihu.com/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=zhihu.com
 // @grant        none
