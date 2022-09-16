@@ -1,11 +1,14 @@
 // ==UserScript==
 // @name         Download NetEase Music
 // @namespace    http://tampermonkey.net/
-// @version      1.1
+// @version      1.1.1
 // @description  进入网易歌单,下载该歌单内的所有歌曲
+// @homepage     https://github.com/san-qi/TampermonkeyScript/tree/main/DownloadNeteaseMusic
 // @author       san-qi
 // @license      GPLv3
 // @match        *://music.163.com/*
+// @connect      music.163.com
+// @connect      *.126.net
 // @require      https://cdn.bootcdn.net/ajax/libs/handsontable/8.3.2/handsontable.full.min.js
 // @resource     https://cdn.bootcdn.net/ajax/libs/handsontable/8.3.2/handsontable.full.min.css
 // @require      https://cdn.jsdelivr.net/npm/sweetalert2@11.4.32/dist/sweetalert2.all.min.js

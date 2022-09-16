@@ -1,8 +1,9 @@
 // ==UserScript==
 // @name         Close Zhihu Popup
 // @namespace    http://tampermonkey.net/
-// @version      0.1
+// @version      0.2
 // @description  自动关闭知乎网页版的初始登录窗口
+// @homepage     https://github.com/san-qi/TampermonkeyScript/tree/main/CloseZhihuPopup
 // @author       san-qi
 // @license      GPLv3
 // @match        https://*.zhihu.com/*
