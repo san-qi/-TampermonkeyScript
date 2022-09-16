@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Download NetEase Music
 // @namespace    http://tampermonkey.net/
-// @version      1.0
+// @version      1.1
 // @description  进入网易歌单,下载该歌单内的所有歌曲
 // @author       san-qi
 // @license      GPLv3
